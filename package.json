@@ -1,0 +1,22 @@
+{
+  "name": "autobib",
+  "version": "0.1.6",
+  "private": true,
+  "description": "Chrome extension that exports BibTeX for the published version of a paper",
+  "type": "module",
+  "scripts": {
+    "cli": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "@types/node": "^20.11.0",
+    "esbuild": "^0.21.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}

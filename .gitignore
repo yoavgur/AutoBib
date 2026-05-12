@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Packaged extension artifacts
+*.zip
+
+# macOS
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*

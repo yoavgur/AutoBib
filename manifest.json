@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "Autobib — Export Published BibTeX",
+  "version": "0.1.6",
+  "description": "Adds a button to paper pages that copies the BibTeX of the published version (not the arXiv preprint) to your clipboard.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "host_permissions": [
+    "https://api.crossref.org/*",
+    "https://dblp.org/*",
+    "https://api2.openreview.net/*",
+    "https://arxiv.org/*",
+    "https://export.arxiv.org/*",
+    "https://aclanthology.org/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://arxiv.org/abs/*",
+        "https://www.arxiv.org/abs/*",
+        "https://arxiv.org/pdf/*",
+        "https://www.arxiv.org/pdf/*"
+      ],
+      "js": ["content/arxiv.js"],
+      "css": ["content/autobib.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.semanticscholar.org/paper/*",
+        "https://www.semanticscholar.org/search*"
+      ],
+      "js": ["content/semanticScholar.js"],
+      "css": ["content/autobib.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://scholar.google.com/scholar*",
+        "https://scholar.google.com/*"
+      ],
+      "js": ["content/googleScholar.js"],
+      "css": ["content/autobib.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
