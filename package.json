@@ -1,6 +1,6 @@
 {
   "name": "autobib",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "description": "Chrome extension that exports BibTeX for the published version of a paper",
   "type": "module",

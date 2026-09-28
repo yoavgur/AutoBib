@@ -49,6 +49,17 @@ describe("key generation", () => {
     expect(firstAuthorLastName("Bahdanau, Dzmitry")).toBe("bahdanau");
   });
 
+  it("transliterates letters that have no diacritic to strip", () => {
+    expect(firstAuthorLastName("Anders Søgaard")).toBe("sogaard");
+    expect(firstAuthorLastName("Jan Kołowski")).toBe("kolowski");
+    expect(firstAuthorLastName("Klaus Straßer")).toBe("strasser");
+    expect(firstAuthorLastName("Mads Sæbø")).toBe("saebo");
+    expect(firstAuthorLastName("Ayşe Yıldız")).toBe("yildiz");
+    expect(firstTitleWord("Œuvres complètes")).toBe("oeuvres");
+    // Same key as the LaTeX-escaped spelling dblp.org's .bib export used.
+    expect(firstAuthorLastName("Anders S{\\o}gaard")).toBe("sogaard");
+  });
+
   it("skips stopwords in title", () => {
     expect(firstTitleWord("Attention is all you need")).toBe("attention");
     expect(firstTitleWord("On the dangers of stochastic parrots")).toBe(

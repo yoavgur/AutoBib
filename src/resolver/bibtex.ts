@@ -105,11 +105,19 @@ export function formatBibtex(entry: BibEntry): string {
   return lines.join("\n");
 }
 
+/** Letters with no diacritic for NFKD to strip; without this, "Søgaard"
+ *  keys as "sgaard". Same letters their LaTeX escapes ({\o}, {\ss}) give. */
+const TRANSLITERATE: Record<string, string> = {
+  ø: "o", Ø: "O", ł: "l", Ł: "L", ß: "ss", ẞ: "SS", æ: "ae", Æ: "AE",
+  œ: "oe", Œ: "OE", ı: "i", đ: "d", Đ: "D", ð: "d", Ð: "D", þ: "th", Þ: "Th",
+};
+
 /** Strip braces / LaTeX from a name and lowercase-asciify for a citation key. */
 function asciifyForKey(s: string): string {
   return s
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "") // strip diacritics
+    .replace(/[øØłŁßẞæÆœŒıđĐðÐþÞ]/g, (c) => TRANSLITERATE[c]!)
     .replace(/[{}\\]/g, "")
     .replace(/[^A-Za-z0-9]/g, "")
     .toLowerCase();

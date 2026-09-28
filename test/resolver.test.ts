@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { resolveBibtex } from "../src/resolver/index.js";
-import type { FetchFn } from "../src/resolver/types.js";
+import type { FetchFn, ProgressEvent } from "../src/resolver/types.js";
+import {
+  ANUBIS_PAGE,
+  BIBTEX_INPROCEEDINGS,
+  DBLP_RECORD,
+  DBLP_SEARCH,
+  candidatesBody,
+  recordBody,
+} from "./helpers/dblpSparql.js";
 
 interface MockResponse {
   status?: number;
@@ -49,37 +57,30 @@ describe("resolveBibtex (mocked)", () => {
           year: "2020",
         }),
       },
-      "dblp.org/search/publ/api": {
-        body: JSON.stringify({
-          result: {
-            hits: {
-              hit: [
-                {
-                  info: {
-                    title: "Language Models are Few-Shot Learners",
-                    year: "2020",
-                    authors: {
-                      author: [
-                        { text: "Tom B. Brown" },
-                        { text: "Benjamin Mann" },
-                      ],
-                    },
-                    key: "conf/nips/BrownMRSKDNSSAA20",
-                    type: "Conference and Workshop Papers",
-                  },
-                },
-              ],
-            },
+      [DBLP_SEARCH]: {
+        body: candidatesBody([
+          {
+            key: "conf/nips/BrownMRSKDNSSAA20",
+            title: "Language Models are Few-Shot Learners.",
+            type: "Inproceedings",
+            year: "2020",
+            authors: ["Tom B. Brown", "Benjamin Mann"],
           },
-        }),
+        ]),
       },
-      "dblp.org/rec/conf/nips/BrownMRSKDNSSAA20.bib": {
-        body: `@inproceedings{DBLP:conf/nips/BrownMRSKDNSSAA20,
-  author = {Tom B. Brown and Benjamin Mann},
-  title = {Language Models are Few-Shot Learners},
-  booktitle = {NeurIPS},
-  year = {2020}
-}`,
+      [DBLP_RECORD]: {
+        body: recordBody({
+          pub: {
+            bibtexType: BIBTEX_INPROCEEDINGS,
+            title: "Language Models are Few-Shot Learners.",
+            yearOfPublication: "2020",
+          },
+          parent: {
+            title:
+              "Advances in Neural Information Processing Systems 33: Annual Conference on Neural Information Processing Systems 2020, NeurIPS 2020, December 6-12, 2020, virtual",
+          },
+          authors: ["Tom B. Brown", "Benjamin Mann"],
+        }),
       },
     });
 
@@ -90,9 +91,42 @@ describe("resolveBibtex (mocked)", () => {
     expect(result.isPublished).toBe(true);
     if (result.isPublished) {
       expect(result.source).toBe("dblp");
+      expect(result.venue).toBe("NeurIPS 2020");
       expect(result.bibtex).toContain("brown2020language");
-      expect(result.bibtex).toContain("booktitle = {NeurIPS}");
+      expect(result.bibtex).toContain("{NeurIPS} 2020, December 6-12, 2020, virtual}");
     }
+  });
+
+  it("reports a DBLP bot-check page as a step error and keeps resolving", async () => {
+    const events: ProgressEvent[] = [];
+    const fetchFn = makeMockFetch({
+      "export.arxiv.org/api/query": {
+        body: arxivAtom({
+          title: "An Article",
+          authors: ["Jane Smith"],
+          year: "2022",
+          doi: "10.1038/x",
+        }),
+      },
+      [DBLP_SEARCH]: { body: ANUBIS_PAGE },
+      "api.crossref.org/works/10.1038/x/transform": {
+        body: `@article{Smith_2022,
+  author = {Smith, Jane},
+  title = {An Article},
+  journal = {Nature},
+  year = {2022}
+}`,
+      },
+    });
+
+    const result = await resolveBibtex(
+      { kind: "arxiv", id: "1234.56789" },
+      { fetch: fetchFn, onProgress: (e) => events.push(e) },
+    );
+
+    expect(result.isPublished).toBe(true);
+    const dblpError = events.find((e) => e.kind === "error" && e.step === "dblp");
+    expect(dblpError).toMatchObject({ message: expect.stringMatching(/bot check/i) });
   });
 
   it("falls back to Crossref when DBLP misses but arXiv has a DOI", async () => {
@@ -105,9 +139,7 @@ describe("resolveBibtex (mocked)", () => {
           doi: "10.1038/x",
         }),
       },
-      "dblp.org/search/publ/api": {
-        body: JSON.stringify({ result: { hits: { hit: [] } } }),
-      },
+      [DBLP_SEARCH]: { body: candidatesBody([]) },
       "api.crossref.org/works/10.1038/x/transform": {
         body: `@article{Smith_2022,
   author = {Smith, Jane},
@@ -138,24 +170,16 @@ describe("resolveBibtex (mocked)", () => {
           year: "2026",
         }),
       },
-      "dblp.org/search/publ/api": {
-        body: JSON.stringify({
-          result: {
-            hits: {
-              hit: [
-                {
-                  info: {
-                    title: "Brand New Preprint",
-                    year: "2026",
-                    authors: { author: { text: "Anon" } },
-                    key: "journals/corr/abs-9999-99999",
-                    type: "Informal and Other Publications",
-                  },
-                },
-              ],
-            },
+      [DBLP_SEARCH]: {
+        body: candidatesBody([
+          {
+            key: "journals/corr/abs-9999-99999",
+            title: "Brand New Preprint.",
+            type: "Informal",
+            year: "2026",
+            authors: ["Anon"],
           },
-        }),
+        ]),
       },
       "api2.openreview.net": {
         body: JSON.stringify({ notes: [] }),
@@ -193,30 +217,16 @@ describe("resolveBibtex (mocked)", () => {
           year: "2025",
         }),
       },
-      "dblp.org/search/publ/api": {
-        body: JSON.stringify({
-          result: {
-            hits: {
-              hit: [
-                {
-                  info: {
-                    title: "Mixing Mechanisms",
-                    year: "2025",
-                    authors: {
-                      author: [
-                        { text: "Yoav Gur-Arieh" },
-                        { text: "Mor Geva" },
-                        { text: "Atticus Geiger" },
-                      ],
-                    },
-                    key: "journals/corr/abs-2510-06182",
-                    type: "Informal and Other Publications",
-                  },
-                },
-              ],
-            },
+      [DBLP_SEARCH]: {
+        body: candidatesBody([
+          {
+            key: "journals/corr/abs-2510-06182",
+            title: "Mixing Mechanisms.",
+            type: "Informal",
+            year: "2025",
+            authors: ["Yoav Gur-Arieh", "Mor Geva", "Atticus Geiger"],
           },
-        }),
+        ]),
       },
       "api2.openreview.net": {
         body: JSON.stringify({

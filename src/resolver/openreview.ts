@@ -61,9 +61,11 @@ export async function fetchOpenReviewBibtex(
   fetchFn: FetchFn,
   query: { title: string; authors?: string[] },
 ): Promise<{ bibtex: string; venue: string } | null> {
-  const url = `${SEARCH}?query=${encodeURIComponent(query.title)}&type=terms&limit=10`;
+  const url = `${SEARCH}?term=${encodeURIComponent(query.title)}&type=terms&limit=10`;
   const res = await fetchFn(url, { headers: { Accept: "application/json" } });
-  if (!res.ok) return null;
+  // An error, not "no match": when the API renamed `query` to `term`, every
+  // 400 here read as "OpenReview (no match)".
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = (await res.json()) as SearchResponse;
   const notes = data.notes ?? [];
   if (notes.length === 0) return null;
